@@ -105,7 +105,7 @@ def generate_and_display_graph(df):
 
 def creating_dataframe(temp):
     # Split the data into lines
-    print(temp)
+    # print(temp)
     lines = temp.strip().split('\n')
 
     # Parse each line and store in a list of tuples
@@ -130,7 +130,7 @@ def call_gemini_api(text):
     # Add your API call logic here
     text = text.lower()
     Final_Text = Instruction + text
-    print(Final_Text)
+    # print(Final_Text)
     response = model.generate_content(Final_Text)
     return response
 
