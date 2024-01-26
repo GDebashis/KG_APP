@@ -113,27 +113,29 @@ def generate_and_display_graph(df):
 
 
 
-# def creating_dataframe(temp):
-#     # Split the data into lines
-#     print(temp)
-#     lines = temp.strip().split('\n')
+def creating_dataframe_text(temp):
+    # Split the data into lines
+    print(temp)
+    lines = temp.strip().split('\n')
 
-#     # Parse each line and store in a list of tuples
-#     parsed_data = []
-#     for line in lines:
-#         entities = line.split('|')
-#         if len(entities) == 3:
-#             parsed_data.append((entities[0].strip(), entities[1].strip(), entities[2].strip()))
+    # Parse each line and store in a list of tuples
+    parsed_data = []
+    for line in lines:
+        entities = line.split('|')
+        if len(entities) == 3:
+            parsed_data.append((entities[0].strip(), entities[1].strip(), entities[2].strip()))
 
-#     # Convert the list of tuples to a DataFrame
-#     df = pd.DataFrame(parsed_data, columns=['Entity 1', 'Relationship', 'Entity 2'])
+    # Convert the list of tuples to a DataFrame
+    df = pd.DataFrame(parsed_data, columns=['Entity 1', 'Relationship', 'Entity 2'])
 
-#     # Drop the first row
-#     df = df.drop(0)
+    # Drop the first row
+    df = df.drop(0)
 
-#     # Reset the index if you want a continuous index starting from 0
-#     df = df.reset_index(drop=True)
-#     return df
+    # Reset the index if you want a continuous index starting from 0
+    df = df.reset_index(drop=True)
+    print(" ##### For Input text: ##########")
+    print(f"Final DataFrame : {df}")
+    return df
 
 def creating_dataframe(temp):
     # Split the data into lines
@@ -212,6 +214,8 @@ def save_results(G,df):
 
 # Main app function
 def main():
+    text_selection = False
+    pdf_selection = False
     G = nx.Graph()
     df= pd.DataFrame()
     st.title("Text Analysis and Knowledge Graph Generation")
@@ -224,44 +228,91 @@ def main():
     instruction_input = st.text_input("Enter your instructions", value=f"{Instruction}")
     # instruction_input = st.text_input("Enter your instructions", value="Extrapolate all the available relationships from the prompt. Don't leave any possible relationships. Every Entity has to have only one member and every Enitity and Relationship should not be more than one word. The Entities have to be unique and the order should be maintained as the prompt is written. The order of the relationships should follow the order of the prompt.Please make it in a table format.\n Example:\n Text: Sakib studies in RUET in the department of CSE with his friend Atiq, Debashis, Audity. The friends of Sakib are cricketers. the roofs of houses are nice.\n Entity 1 | Relationship | Entity 2 \n Sakib | studies_in | RUET \n Sakib | studies_in | CSE \n Atiq | studies_in | CSE \n Atiq | studies_in | RUET\n Debashis | studies_in | CSE \n Debashis | studies_in | RUET \n Audity | studies_in | CSE \n Audity | studies_in | RUET \n friends | are | cricketers \n the roofs | are | nice \n\n Prompt:")
 
+    ### ASKING FOR A CHOICE
+     # Radio button for user to select input method
+    input_method = st.radio("Choose your input method", ("Input Text", "Upload PDF"))
+    uploaded_content = None
+    if input_method == "Input Text":
+        text_selection = True
+        text_input = st.text_area("Enter your text here. If you found any Keyerror then please try again")
+        uploaded_content = text_input
+        print(f"Text Content \n:{uploaded_content}")
+    else:
+        pdf_selection=True
+        pdf_file = st.file_uploader("Upload a PDF file", type=["pdf"])
+        if pdf_file:
+            pdf_content = pdf_file.getvalue()
+            uploaded_content = extract_text_from_pdf(pdf_content)
+            print(f"Pdf content \n:{uploaded_content[:150]}")
     # Text input
     # text_input = st.text_area("Enter your text here. If you found any Keyerror then please try again")
-    pdf_file = st.file_uploader("Upload a PDF file",type=["pdf"])
+    # pdf_file = st.file_uploader("Upload a PDF file",type=["pdf"])
     #Process button
     if st.button("Process"):
         progress_bar.progress(0) 
         progress_text_placeholder.text("Start Processing")
-        if pdf_file:
-            pdf_content = pdf_file.getvalue()
-            extracted_text = extract_text_from_pdf(pdf_content)
-            print(f"Pdf content \n:{extracted_text[:150]}")
-            # time.sleep(1)
-            progress_placeholder.empty()
-            progress_text_placeholder.text("Progress: 20%")
-            progress_bar.progress(20) 
-            # Call Gemini API
-            response = call_gemini_api(instruction_input,extracted_text)
-            progress_placeholder.empty()
-            progress_bar.progress(40) 
-            progress_text_placeholder.text("Progress: 40%")
-            temp = response.text
-            print(f"########### OUTPUT #########")
-            print(temp)
-            print(f"########### End of Output #########")
-            # Creating DataFrame
+        # time.sleep(1)
+        progress_placeholder.empty()
+        progress_text_placeholder.text("Progress: 20%")
+        progress_bar.progress(20) 
+        # Call Gemini API
+        response = call_gemini_api(instruction_input,uploaded_content)
+        progress_placeholder.empty()
+        progress_bar.progress(40) 
+        progress_text_placeholder.text("Progress: 40%")
+        temp = response.text
+        print(f"########### OUTPUT #########")
+        print(temp)
+        print(f"########### End of Output #########")
+        # Creating DataFrame
+        if text_selection:
+            df = creating_dataframe_text(temp)
+        else:
             df = creating_dataframe(temp)
-            progress_placeholder.empty()
-            progress_bar.progress(60) 
-            progress_text_placeholder.text("Progress: 60%")
-            st.dataframe(df, width=800, height=600)
-            time.sleep(1)
-            progress_bar = st.progress(80)
-            progress_text_placeholder.text("Progress: 80%")
-            # Generate graph
-            G = generate_and_display_graph(df)
-            progress_placeholder.empty()
-            progress_bar.progress(100) 
-            progress_text_placeholder.text("Completed")
+
+        progress_placeholder.empty()
+        progress_bar.progress(60) 
+        progress_text_placeholder.text("Progress: 60%")
+        st.dataframe(df, width=800, height=600)
+        time.sleep(1)
+        progress_bar = st.progress(80)
+        progress_text_placeholder.text("Progress: 80%")
+        # Generate graph
+        G = generate_and_display_graph(df)
+        progress_placeholder.empty()
+        progress_bar.progress(100) 
+        progress_text_placeholder.text("Completed")
+        # if pdf_file:
+        #     pdf_content = pdf_file.getvalue()
+        #     extracted_text = extract_text_from_pdf(pdf_content)
+        #     print(f"Pdf content \n:{extracted_text[:150]}")
+        #     # time.sleep(1)
+        #     progress_placeholder.empty()
+        #     progress_text_placeholder.text("Progress: 20%")
+        #     progress_bar.progress(20) 
+        #     # Call Gemini API
+        #     response = call_gemini_api(instruction_input,extracted_text)
+        #     progress_placeholder.empty()
+        #     progress_bar.progress(40) 
+        #     progress_text_placeholder.text("Progress: 40%")
+        #     temp = response.text
+        #     print(f"########### OUTPUT #########")
+        #     print(temp)
+        #     print(f"########### End of Output #########")
+        #     # Creating DataFrame
+        #     df = creating_dataframe(temp)
+        #     progress_placeholder.empty()
+        #     progress_bar.progress(60) 
+        #     progress_text_placeholder.text("Progress: 60%")
+        #     st.dataframe(df, width=800, height=600)
+        #     time.sleep(1)
+        #     progress_bar = st.progress(80)
+        #     progress_text_placeholder.text("Progress: 80%")
+        #     # Generate graph
+        #     G = generate_and_display_graph(df)
+        #     progress_placeholder.empty()
+        #     progress_bar.progress(100) 
+        #     progress_text_placeholder.text("Completed")
             # G = generate_graph(df)
             
             # # Drawing the graph
